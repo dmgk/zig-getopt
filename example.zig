@@ -32,4 +32,6 @@ pub fn main() void {
             getopt.Error.MissingArgument => debug.print("option requires an argument: {c}\n", .{opts.optopt}),
         }
     }
+
+    debug.print("remaining args: {s}\n", .{opts.args()});
 }

@@ -4,8 +4,12 @@ const mem = std.mem;
 const os = std.os;
 const expect = std.testing.expect;
 
+/// Parsed option struct.
 pub const Option = struct {
+    /// Option character.
     opt: u8,
+
+    /// Option argument, if any.
     arg: ?[]const u8 = null,
 };
 
@@ -15,8 +19,12 @@ pub const OptionsIterator = struct {
     argv: [][*:0]const u8,
     opts: []const u8,
 
+    /// Index of the current element of the argv vector.
     optind: usize = 1,
+
     optpos: usize = 1,
+
+    /// Current option character.
     optopt: u8 = undefined,
 
     pub fn next(self: *OptionsIterator) Error!?Option {
@@ -35,13 +43,13 @@ pub const OptionsIterator = struct {
 
         self.optopt = arg[self.optpos];
 
-        const maybe_i = mem.indexOfScalar(u8, self.opts, self.optopt);
-        if (maybe_i) |i| {
-            if (i < self.opts.len - 1 and self.opts[i + 1] == ':') {
+        const maybe_idx = mem.indexOfScalar(u8, self.opts, self.optopt);
+        if (maybe_idx) |idx| {
+            if (idx < self.opts.len - 1 and self.opts[idx + 1] == ':') {
                 if (arg[self.optpos + 1] != 0) {
                     const res = Option{
                         .opt = self.optopt,
-                        .arg = mem.sliceTo(arg + self.optpos + 1, 0),
+                        .arg = mem.span(arg + self.optpos + 1),
                     };
                     self.optind += 1;
                     self.optpos = 1;
@@ -66,22 +74,27 @@ pub const OptionsIterator = struct {
         } else return Error.InvalidOption;
     }
 
-    pub fn args(self: *OptionsIterator) [][*:0]const u8 {
-        return argv[self.optind..];
+    /// Return remaining arguments, if any.
+    pub fn args(self: *OptionsIterator) ?[][*:0]const u8 {
+        if (self.optind < self.argv.len)
+            return self.argv[self.optind..]
+        else
+            return null;
     }
 };
 
-fn getoptArgv(argv: [][*:0]const u8, opts: []const u8) OptionsIterator {
+fn getoptArgv(argv: [][*:0]const u8, optstring: []const u8) OptionsIterator {
     return OptionsIterator{
         .argv = argv,
-        .opts = opts,
+        .opts = optstring,
     };
 }
 
-pub fn getopt(opts: []const u8) OptionsIterator {
+/// Parse os.argv according to the optstring.
+pub fn getopt(optstring: []const u8) OptionsIterator {
     // https://github.com/ziglang/zig/issues/8808
     const argv: [][*:0]const u8 = os.argv;
-    return getoptArgv(argv, opts);
+    return getoptArgv(argv, optstring);
 }
 
 test "no args separate" {
@@ -107,6 +120,8 @@ test "no args separate" {
             try expect(opt.arg == null and expected[i].arg == null);
         }
     }
+
+    try expect(opts.args() == null);
 }
 
 test "no args joined" {
@@ -216,7 +231,7 @@ test "invalid option" {
     if (maybe_opt) {
         unreachable;
     } else |err| {
-        try expect(err == OptionError.InvalidOption);
+        try expect(err == Error.InvalidOption);
         try expect(opts.optopt == 'z');
     }
 }
@@ -236,7 +251,70 @@ test "missing argument" {
     if (maybe_opt) {
         unreachable;
     } else |err| {
-        try expect(err == OptionError.MissingArgument);
+        try expect(err == Error.MissingArgument);
         try expect(opts.optopt == 'z');
     }
+}
+
+test "positional args" {
+    var argv = [_][*:0]const u8{
+        "getopt",
+        "-abc10",
+        "-d",
+        "foo",
+        "bar",
+    };
+
+    const expected = [_]Option{
+        .{ .opt = 'a' },
+        .{ .opt = 'b' },
+        .{
+            .opt = 'c',
+            .arg = "10",
+        },
+        .{ .opt = 'd' },
+    };
+
+    var opts = getoptArgv(&argv, "abc:d");
+
+    var i: usize = 0;
+    while (try opts.next()) |opt| : (i += 1) {
+        try expect(opt.opt == expected[i].opt);
+        if (opt.arg != null and expected[i].arg != null) {
+            try expect(mem.eql(u8, opt.arg.?, expected[i].arg.?));
+        } else {
+            try expect(opt.arg == null and expected[i].arg == null);
+        }
+    }
+
+    try expect(mem.eql([*:0]const u8, opts.args().?, &[_][*:0]const u8{ "foo", "bar" }));
+}
+
+test "positional args with separator" {
+    var argv = [_][*:0]const u8{
+        "getopt",
+        "-ab",
+        "--",
+        "foo",
+        "bar",
+    };
+
+    const expected = [_]Option{
+        .{ .opt = 'a' },
+        .{ .opt = 'b' },
+    };
+
+    var opts = getoptArgv(&argv, "ab");
+
+    var i: usize = 0;
+    while (try opts.next()) |opt| : (i += 1) {
+        try expect(opt.opt == expected[i].opt);
+        if (opt.arg != null and expected[i].arg != null) {
+            try expect(mem.eql(u8, opt.arg.?, expected[i].arg.?));
+        } else {
+            try expect(opt.arg == null and expected[i].arg == null);
+        }
+    }
+
+    try expect(mem.eql([*:0]const u8, opts.args().?, &[_][*:0]const u8{ "foo", "bar" }));
 }
