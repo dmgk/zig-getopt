@@ -38,7 +38,7 @@ pub const OptionsIterator = struct {
             return null;
         }
 
-        if (arg[0] != '-' or !ascii.isAlNum(arg[1]))
+        if (arg[0] != '-' or !ascii.isAlphanumeric(arg[1]))
             return null;
 
         self.optopt = arg[self.optpos];
