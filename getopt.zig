@@ -228,7 +228,7 @@ test "invalid option" {
     try expect((try opts.next()).?.opt == 'a');
 
     const maybe_opt = opts.next();
-    if (maybe_opt) {
+    if (maybe_opt) |_| {
         unreachable;
     } else |err| {
         try expect(err == Error.InvalidOption);
@@ -248,7 +248,7 @@ test "missing argument" {
     try expect((try opts.next()).?.opt == 'a');
 
     const maybe_opt = opts.next();
-    if (maybe_opt) {
+    if (maybe_opt) |_| {
         unreachable;
     } else |err| {
         try expect(err == Error.MissingArgument);

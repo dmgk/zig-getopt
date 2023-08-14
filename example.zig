@@ -33,5 +33,5 @@ pub fn main() void {
         }
     }
 
-    debug.print("remaining args: {s}\n", .{opts.args()});
+    debug.print("remaining args: {?s}\n", .{opts.args()});
 }
