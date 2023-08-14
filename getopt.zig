@@ -159,15 +159,9 @@ test "with args separate" {
     };
 
     const expected = [_]Option{
-        .{
-            .opt = 'a',
-            .arg = "10",
-        },
+        .{ .opt = 'a', .arg = "10" },
         .{ .opt = 'b' },
-        .{
-            .opt = 'c',
-            .arg = "42",
-        },
+        .{ .opt = 'c', .arg = "42" },
     };
 
     var opts = getoptArgv(&argv, "a:bc:");
@@ -192,15 +186,9 @@ test "with args joined" {
     };
 
     const expected = [_]Option{
-        .{
-            .opt = 'a',
-            .arg = "10",
-        },
+        .{ .opt = 'a', .arg = "10" },
         .{ .opt = 'b' },
-        .{
-            .opt = 'c',
-            .arg = "42",
-        },
+        .{ .opt = 'c', .arg = "42" },
     };
 
     var opts = getoptArgv(&argv, "a:bc:");
@@ -268,10 +256,7 @@ test "positional args" {
     const expected = [_]Option{
         .{ .opt = 'a' },
         .{ .opt = 'b' },
-        .{
-            .opt = 'c',
-            .arg = "10",
-        },
+        .{ .opt = 'c', .arg = "10" },
         .{ .opt = 'd' },
     };
 
