@@ -10,7 +10,7 @@ pub const Option = struct {
     opt: u8,
 
     /// Option argument, if any.
-    arg: ?[]const u8 = null,
+    arg: ?[:0]const u8 = null,
 };
 
 pub const Error = error{ InvalidOption, MissingArgument };
@@ -49,7 +49,7 @@ pub const OptionsIterator = struct {
                 if (arg[self.optpos + 1] != 0) {
                     const res = Option{
                         .opt = self.optopt,
-                        .arg = mem.span(arg + self.optpos + 1),
+                        .arg = mem.sliceTo(arg + self.optpos + 1, 0),
                     };
                     self.optind += 1;
                     self.optpos = 1;
@@ -57,7 +57,7 @@ pub const OptionsIterator = struct {
                 } else if (self.optind + 1 < self.argv.len) {
                     const res = Option{
                         .opt = self.optopt,
-                        .arg = mem.span(self.argv[self.optind + 1]),
+                        .arg = mem.sliceTo(self.argv[self.optind + 1], 0),
                     };
                     self.optind += 2;
                     self.optpos = 1;
@@ -302,4 +302,31 @@ test "positional args with separator" {
     }
 
     try expect(mem.eql([*:0]const u8, opts.args().?, &[_][*:0]const u8{ "foo", "bar" }));
+}
+
+test "separate optarg is sentinel-terminated" {
+    var argv = [_][*:0]const u8{
+        "getopt",
+        "-a10",
+    };
+
+    var opts = getoptArgv(&argv, "a:bc:");
+
+    const arg = (try opts.next()).?.arg.?;
+    // If arg is not sentinel-terminated, this panics with index OOB
+    try expect(arg[arg.len] == 0);
+}
+
+test "separate optarg is sentinel-terminated" {
+    var argv = [_][*:0]const u8{
+        "getopt",
+        "-c",
+        "42",
+    };
+
+    var opts = getoptArgv(&argv, "a:bc:");
+
+    const arg = (try opts.next()).?.arg.?;
+    // If arg is not sentinel-terminated, this panics with index OOB
+    try expect(arg[arg.len] == 0);
 }
