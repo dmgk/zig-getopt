@@ -4,7 +4,7 @@ const mem = std.mem;
 const os = std.os;
 const expect = std.testing.expect;
 
-/// Parsed option struct.
+/// Parsed option struct.
 pub const Option = struct {
     /// Option character.
     opt: u8,
